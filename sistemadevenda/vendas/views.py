@@ -2,6 +2,8 @@ from django.shortcuts import render
 from django.http import HttpResponse
 
 def index(request):
-    return HttpResponse("Hello, world. You're at the vendas index.")
+    return render(request, 'base.html')
 
+def login(request):
+    return render(request, 'login.html')
 # Create your views here.
