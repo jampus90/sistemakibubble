@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="row">
+
+    <!-- Produtos disponíveis -->
+    <div class="col-md-7">
+      <h4>Produtos</h4>
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+        {% for produto in produtos %}
+        <div class="col">
+          <div class="card h-100">
+            <div class="card-body">
+              <h6 class="card-title">{{ produto.nome }}</h6>
+              <p class="card-text text-muted mb-2">R$ {{ produto.preco_unitario }}</p>
+              <small class="text-secondary">Estoque: {{ produto.quantidade_estoque }}</small>
+            </div>
+            <div class="card-footer">
+              <form method="post" action="{% url 'pdv_adicionar' %}" class="d-flex gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="produto_id" value="{{ produto.pk }}">
+                <input type="number" name="quantidade" value="1" min="1"
+                       max="{{ produto.quantidade_estoque }}" class="form-control form-control-sm" style="width:70px">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Adicionar</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-muted">Nenhum produto disponível em estoque.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Carrinho -->
+    <div class="col-md-5">
+      <h4>Carrinho</h4>
+      {% if carrinho %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th class="text-center">Qtd</th>
+            <th class="text-end">Subtotal</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for produto_id, item in carrinho.items %}
+          <tr>
+            <td>{{ item.nome }}</td>
+            <td class="text-center">{{ item.quantidade }}</td>
+            <td class="text-end">R$ {{ item.preco|floatformat:2 }}</td>
+            <td>
+              <form method="post" action="{% url 'pdv_remover' produto_id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger">&times;</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2"><strong>Total</strong></td>
+            <td class="text-end"><strong>R$ {{ total|floatformat:2 }}</strong></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <form method="post" action="{% url 'pdv_finalizar' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success w-100">Finalizar Venda</button>
+      </form>
+      {% else %}
+      <p class="text-muted">Carrinho vazio.</p>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

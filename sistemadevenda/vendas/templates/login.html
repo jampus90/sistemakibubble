@@ -19,6 +19,7 @@
 
       <form method="POST">
         {% csrf_token %}
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
         <div class="mb-3">
           <label for="username" class="form-label">Username</label>
           <input type="text" class="form-control" id="username" name="username" required>
@@ -27,16 +28,11 @@
           <label for="password" class="form-label">Password</label>
           <input type="password" class="form-control" id="password" name="password" required>
         </div>
-        <button type="submit" class="btn btn-primary w-100">Submit</button>
+        <button type="submit" class="btn btn-primary w-100">Entrar</button>
       </form>
 
     </div>
-    
-  </div>
-  <div class="container d-flex justify-content-center">
-    {%for user in user_list %}
-      <li>{{ user.username }}</li>
-    {% endfor %}
+
   </div>
   
     

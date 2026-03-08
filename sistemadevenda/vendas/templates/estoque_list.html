@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Estoque</h2>
+        <a href="{% url 'estoque_create' %}" class="btn btn-primary">+ Novo Produto</a>
+    </div>
+
+    {% if produtos %}
+    <table class="table table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>Nome</th>
+                <th>Preço Unitário</th>
+                <th>Qtd. em Estoque</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for produto in produtos %}
+            <tr {% if produto.quantidade_estoque < estoque_baixo %}class="table-warning"{% endif %}>
+                <td>{{ produto.nome }}</td>
+                <td>R$ {{ produto.preco_unitario }}</td>
+                <td>
+                    {{ produto.quantidade_estoque }}
+                    {% if produto.quantidade_estoque < estoque_baixo %}
+                    <span class="badge bg-warning text-dark ms-1">Estoque baixo</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'estoque_edit' produto.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+                    <a href="{% url 'estoque_delete' produto.pk %}" class="btn btn-sm btn-outline-danger">Deletar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">Nenhum produto cadastrado.</p>
+    {% endif %}
+</div>
+{% endblock %}

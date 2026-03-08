@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 500px;">
+    <h2>{% if produto %}Editar Produto{% else %}Novo Produto{% endif %}</h2>
+
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label class="form-label">Nome</label>
+            <input type="text" name="nome" class="form-control" value="{{ produto.nome }}" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Preço Unitário (R$)</label>
+            <input type="number" name="preco_unitario" class="form-control" step="0.01" min="0"
+                   value="{{ produto.preco_unitario }}" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Quantidade em Estoque</label>
+            <input type="number" name="quantidade_estoque" class="form-control" min="0"
+                   value="{{ produto.quantidade_estoque|default:0 }}">
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Salvar</button>
+            <a href="{% url 'estoque_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
