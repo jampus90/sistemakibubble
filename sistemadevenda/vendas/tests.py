@@ -426,3 +426,117 @@ class ResumoViewTest(TestCase):
         response = self.client.get(self.url, {'data_inicio': inicio, 'data_fim': fim})
         self.assertEqual(response.context['num_vendas'], 2)
         self.assertEqual(response.context['total_vendido'], Decimal('60.00'))
+
+
+# ── Senha ─────────────────────────────────────────────────────────────────────
+
+class SenhaGeracaoTest(TestCase):
+    def setUp(self):
+        self.user = make_user()
+        self.produto = make_produto(preco_unitario='10.00', quantidade_estoque=20)
+        self.client.login(username='funcionario', password='senha123')
+
+    def _finalizar(self, wpp=''):
+        self.client.post(reverse('pdv_adicionar'), {'produto_id': self.produto.pk, 'quantidade': 1})
+        return self.client.post(reverse('pdv_finalizar'), {'numero_wpp': wpp})
+
+    def test_primeira_venda_do_dia_recebe_senha_1(self):
+        self._finalizar()
+        venda = Venda.objects.first()
+        self.assertEqual(venda.senha, 1)
+
+    def test_segunda_venda_recebe_senha_2(self):
+        self._finalizar()
+        self._finalizar()
+        vendas = Venda.objects.order_by('senha')
+        self.assertEqual(vendas[1].senha, 2)
+
+    def test_senha_apos_999_volta_para_1(self):
+        Venda.objects.create(funcionario=self.user, total_venda='0.00', senha=999)
+        self._finalizar()
+        nova_venda = Venda.objects.order_by('-id').first()
+        self.assertEqual(nova_venda.senha, 1)
+
+    def test_senha_reinicia_em_novo_dia(self):
+        venda_ontem = Venda.objects.create(funcionario=self.user, total_venda='0.00', senha=50)
+        Venda.objects.filter(pk=venda_ontem.pk).update(data_hora=timezone.now() - timedelta(days=1))
+        self._finalizar()
+        nova_venda = Venda.objects.order_by('-id').first()
+        self.assertEqual(nova_venda.senha, 1)
+
+    def test_venda_com_wpp_salva_numero(self):
+        self._finalizar(wpp='5511999998888')
+        venda = Venda.objects.first()
+        self.assertEqual(venda.numero_wpp, '5511999998888')
+
+    def test_venda_sem_wpp_salva_vazio(self):
+        self._finalizar(wpp='')
+        venda = Venda.objects.first()
+        self.assertEqual(venda.numero_wpp, '')
+
+    def test_senha_aparece_no_contexto_apos_finalizar(self):
+        self._finalizar()
+        # Senha deve estar na sessão para exibição no PDV
+        self.assertEqual(self.client.session.get('ultima_senha'), 1)
+
+
+# ── Pedidos ───────────────────────────────────────────────────────────────────
+
+class PedidosViewTest(TestCase):
+    def setUp(self):
+        self.user = make_user()
+        self.url = reverse('pedidos')
+        self.client.login(username='funcionario', password='senha123')
+
+    def test_redireciona_nao_autenticado(self):
+        self.client.logout()
+        response = self.client.get(self.url)
+        self.assertRedirects(response, f"{reverse('login')}?next={self.url}")
+
+    def test_exibe_pedidos_pendentes_de_hoje(self):
+        venda = make_venda(self.user, total='30.00')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(venda, response.context['pedidos'])
+
+    def test_nao_exibe_pedidos_prontos(self):
+        venda = make_venda(self.user, total='30.00')
+        Venda.objects.filter(pk=venda.pk).update(status='pronto')
+        response = self.client.get(self.url)
+        self.assertNotIn(venda, response.context['pedidos'])
+
+    def test_nao_exibe_pedidos_de_outros_dias(self):
+        venda = make_venda(self.user, total='30.00', dias_atras=1)
+        response = self.client.get(self.url)
+        self.assertNotIn(venda, response.context['pedidos'])
+
+
+class MarcarProntoTest(TestCase):
+    def setUp(self):
+        self.user = make_user()
+        self.venda = make_venda(self.user, total='30.00')
+        Venda.objects.filter(pk=self.venda.pk).update(senha=42, numero_wpp='5511999998888')
+        self.venda.refresh_from_db()
+        self.url = reverse('pedido_pronto', args=[self.venda.pk])
+        self.client.login(username='funcionario', password='senha123')
+
+    def test_marcar_pronto_atualiza_status(self):
+        self.client.post(self.url)
+        self.venda.refresh_from_db()
+        self.assertEqual(self.venda.status, 'pronto')
+
+    def test_marcar_pronto_redireciona_para_pedidos_com_wpp(self):
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('pedidos'), response['Location'])
+        self.assertIn('pronto_senha=42', response['Location'])
+        self.assertIn('5511999998888', response['Location'])
+
+    def test_marcar_pronto_sem_wpp_redireciona_para_pedidos(self):
+        Venda.objects.filter(pk=self.venda.pk).update(numero_wpp='')
+        response = self.client.post(self.url)
+        self.assertRedirects(response, reverse('pedidos'))
+
+    def test_pedido_inexistente_retorna_404(self):
+        response = self.client.post(reverse('pedido_pronto', args=[9999]))
+        self.assertEqual(response.status_code, 404)

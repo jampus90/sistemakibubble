@@ -11,6 +11,9 @@ urlpatterns = [
     path('pdv/adicionar/', views.pdv_adicionar, name='pdv_adicionar'),
     path('pdv/remover/<int:produto_id>/', views.pdv_remover, name='pdv_remover'),
     path('pdv/finalizar/', views.pdv_finalizar, name='pdv_finalizar'),
+    # Pedidos
+    path('pedidos/', views.pedidos, name='pedidos'),
+    path('pedidos/<int:pk>/pronto/', views.pedido_pronto, name='pedido_pronto'),
     # Resumo
     path('resumo/', views.resumo, name='resumo'),
     # Estoque

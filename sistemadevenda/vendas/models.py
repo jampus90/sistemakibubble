@@ -17,10 +17,20 @@ class Produto(models.Model):
         return self.nome
 
 class Venda(models.Model):
+    STATUS_PENDENTE = 'pendente'
+    STATUS_PRONTO = 'pronto'
+    STATUS_CHOICES = [
+        (STATUS_PENDENTE, 'Pendente'),
+        (STATUS_PRONTO, 'Pronto'),
+    ]
+
     funcionario = models.ForeignKey(User, on_delete=models.PROTECT, related_name='vendas')
-    cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, blank=True, related_name='compras')  
+    cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, blank=True, related_name='compras')
     data_hora = models.DateTimeField(auto_now_add=True)
     total_venda = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    senha = models.PositiveSmallIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDENTE)
+    numero_wpp = models.CharField(max_length=20, blank=True, default='')
 
     def __str__(self):
         return f"Venda #{self.id} - {self.data_hora.strftime('%d/%m/%Y %H:%M')}"

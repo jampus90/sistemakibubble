@@ -1,6 +1,15 @@
 {% extends 'base.html' %}
 
 {% block content %}
+{% if ultima_senha %}
+<div class="container-fluid mt-3">
+  <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-3" role="alert">
+    <span class="fs-5">Venda finalizada!</span>
+    <span class="badge bg-success fs-3 px-4 py-2">Senha {{ ultima_senha }}</span>
+    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+</div>
+{% endif %}
 <div class="container-fluid mt-4">
   <div class="row">
 
@@ -72,6 +81,10 @@
 
       <form method="post" action="{% url 'pdv_finalizar' %}">
         {% csrf_token %}
+        <div class="mb-2">
+          <input type="tel" name="numero_wpp" class="form-control form-control-sm"
+                 placeholder="WhatsApp do cliente (opcional, ex: 5511999998888)">
+        </div>
         <button type="submit" class="btn btn-success w-100">Finalizar Venda</button>
       </form>
       {% else %}

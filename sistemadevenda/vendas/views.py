@@ -1,13 +1,28 @@
+import urllib.parse
+
 from django.shortcuts import redirect, render, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Sum
+from django.db.models import Sum, Max
+from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 from decimal import Decimal
 from .models import Produto, Venda, ItemVenda
 
 ESTOQUE_BAIXO = 5
+
+
+def _gerar_senha_hoje():
+    hoje = timezone.now().date()
+    max_senha = Venda.objects.filter(
+        data_hora__date=hoje,
+        senha__isnull=False,
+    ).aggregate(Max('senha'))['senha__max']
+    if max_senha is None or max_senha >= 999:
+        return 1
+    return max_senha + 1
 
 def index(request):
     if request.user.is_authenticated:
@@ -119,10 +134,12 @@ def pdv(request):
         Decimal(item['preco']) * item['quantidade']
         for item in carrinho.values()
     )
+    ultima_senha = request.session.pop('ultima_senha', None)
     return render(request, 'pdv.html', {
         'produtos': produtos,
         'carrinho': carrinho,
         'total': total,
+        'ultima_senha': ultima_senha,
     })
 
 
@@ -172,7 +189,15 @@ def pdv_finalizar(request):
             for item in carrinho.values()
         )
 
-        venda = Venda.objects.create(funcionario=request.user, total_venda=total)
+        nova_senha = _gerar_senha_hoje()
+        numero_wpp = request.POST.get('numero_wpp', '').strip()
+
+        venda = Venda.objects.create(
+            funcionario=request.user,
+            total_venda=total,
+            senha=nova_senha,
+            numero_wpp=numero_wpp,
+        )
 
         for produto_id, item in carrinho.items():
             produto = Produto.objects.get(pk=produto_id)
@@ -186,8 +211,46 @@ def pdv_finalizar(request):
             produto.save()
 
         request.session['carrinho'] = {}
+        request.session['ultima_senha'] = nova_senha
 
     return redirect('pdv')
+
+
+# ── Pedidos ───────────────────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+def pedidos(request):
+    hoje = timezone.now().date()
+    pedidos_hoje = Venda.objects.filter(
+        data_hora__date=hoje,
+        status=Venda.STATUS_PENDENTE,
+    ).order_by('senha')
+
+    pronto_senha = request.GET.get('pronto_senha', '')
+    pronto_wpp = request.GET.get('pronto_wpp', '')
+    pronto_wpp_url = ''
+    if pronto_wpp:
+        msg = f'Seu pedido #{pronto_senha} esta pronto! Retire no balcao.'
+        pronto_wpp_url = f'https://wa.me/{pronto_wpp}?text={urllib.parse.quote(msg)}'
+
+    return render(request, 'pedidos.html', {
+        'pedidos': pedidos_hoje,
+        'pronto_senha': pronto_senha,
+        'pronto_wpp_url': pronto_wpp_url,
+    })
+
+
+@login_required(login_url='login')
+def pedido_pronto(request, pk):
+    venda = get_object_or_404(Venda, pk=pk)
+    if request.method == 'POST':
+        venda.status = Venda.STATUS_PRONTO
+        venda.save()
+        redirect_url = reverse('pedidos')
+        if venda.numero_wpp:
+            redirect_url += f'?pronto_senha={venda.senha}&pronto_wpp={venda.numero_wpp}'
+        return redirect(redirect_url)
+    return redirect('pedidos')
 
 
 # ── Resumo ────────────────────────────────────────────────────────────────────
