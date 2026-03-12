@@ -143,6 +143,15 @@ def pdv(request):
     })
 
 
+def _carrinho_context(request):
+    carrinho = request.session.get('carrinho', {})
+    total = sum(
+        Decimal(item['preco']) * item['quantidade']
+        for item in carrinho.values()
+    )
+    return {'carrinho': carrinho, 'total': total}
+
+
 @login_required(login_url='login')
 def pdv_adicionar(request):
     if request.method == 'POST':
@@ -151,20 +160,20 @@ def pdv_adicionar(request):
 
         produto = get_object_or_404(Produto, pk=produto_id)
 
-        if produto.quantidade_estoque == 0:
-            return redirect('pdv')
+        if produto.quantidade_estoque > 0:
+            carrinho = request.session.get('carrinho', {})
+            atual = carrinho.get(produto_id, {}).get('quantidade', 0)
+            nova_quantidade = min(atual + quantidade, produto.quantidade_estoque)
 
-        carrinho = request.session.get('carrinho', {})
-        atual = carrinho.get(produto_id, {}).get('quantidade', 0)
-        nova_quantidade = min(atual + quantidade, produto.quantidade_estoque)
+            carrinho[produto_id] = {
+                'nome': produto.nome,
+                'preco': str(produto.preco_unitario),
+                'quantidade': nova_quantidade,
+            }
+            request.session['carrinho'] = carrinho
 
-        carrinho[produto_id] = {
-            'nome': produto.nome,
-            'preco': str(produto.preco_unitario),
-            'quantidade': nova_quantidade,
-        }
-        request.session['carrinho'] = carrinho
-
+    if request.headers.get('HX-Request'):
+        return render(request, '_carrinho.html', _carrinho_context(request))
     return redirect('pdv')
 
 
@@ -174,6 +183,9 @@ def pdv_remover(request, produto_id):
         carrinho = request.session.get('carrinho', {})
         carrinho.pop(str(produto_id), None)
         request.session['carrinho'] = carrinho
+
+    if request.headers.get('HX-Request'):
+        return render(request, '_carrinho.html', _carrinho_context(request))
     return redirect('pdv')
 
 

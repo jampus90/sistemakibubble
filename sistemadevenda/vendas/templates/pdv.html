@@ -26,7 +26,10 @@
               <small class="text-secondary">Estoque: {{ produto.quantidade_estoque }}</small>
             </div>
             <div class="card-footer">
-              <form method="post" action="{% url 'pdv_adicionar' %}" class="d-flex gap-2">
+              <form hx-post="{% url 'pdv_adicionar' %}"
+                    hx-target="#carrinho"
+                    hx-swap="innerHTML"
+                    class="d-flex gap-2">
                 {% csrf_token %}
                 <input type="hidden" name="produto_id" value="{{ produto.pk }}">
                 <input type="number" name="quantidade" value="1" min="1"
@@ -45,51 +48,9 @@
     <!-- Carrinho -->
     <div class="col-md-5">
       <h4>Carrinho</h4>
-      {% if carrinho %}
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>Produto</th>
-            <th class="text-center">Qtd</th>
-            <th class="text-end">Subtotal</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for produto_id, item in carrinho.items %}
-          <tr>
-            <td>{{ item.nome }}</td>
-            <td class="text-center">{{ item.quantidade }}</td>
-            <td class="text-end">R$ {{ item.preco|floatformat:2 }}</td>
-            <td>
-              <form method="post" action="{% url 'pdv_remover' produto_id %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-outline-danger">&times;</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="2"><strong>Total</strong></td>
-            <td class="text-end"><strong>R$ {{ total|floatformat:2 }}</strong></td>
-            <td></td>
-          </tr>
-        </tfoot>
-      </table>
-
-      <form method="post" action="{% url 'pdv_finalizar' %}">
-        {% csrf_token %}
-        <div class="mb-2">
-          <input type="tel" name="numero_wpp" class="form-control form-control-sm"
-                 placeholder="WhatsApp do cliente (opcional, ex: 5511999998888)">
-        </div>
-        <button type="submit" class="btn btn-success w-100">Finalizar Venda</button>
-      </form>
-      {% else %}
-      <p class="text-muted">Carrinho vazio.</p>
-      {% endif %}
+      <div id="carrinho">
+        {% include '_carrinho.html' %}
+      </div>
     </div>
 
   </div>
