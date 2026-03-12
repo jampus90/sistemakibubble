@@ -136,6 +136,19 @@ class EstoqueListViewTest(TestCase):
         response = self.client.get(self.url)
         self.assertContains(response, 'Estoque baixo')
 
+    def test_botao_deletar_visivel_para_admin(self):
+        make_produto()
+        admin = make_admin(username='admin2')
+        self.client.login(username='admin2', password='senha123')
+        response = self.client.get(self.url)
+        self.assertContains(response, 'Deletar')
+
+    def test_botao_deletar_invisivel_para_nao_admin(self):
+        make_produto()
+        self.client.login(username='funcionario', password='senha123')
+        response = self.client.get(self.url)
+        self.assertNotContains(response, 'Deletar')
+
 
 class EstoqueCreateViewTest(TestCase):
     def setUp(self):
@@ -540,3 +553,24 @@ class MarcarProntoTest(TestCase):
     def test_pedido_inexistente_retorna_404(self):
         response = self.client.post(reverse('pedido_pronto', args=[9999]))
         self.assertEqual(response.status_code, 404)
+
+
+# ── Navbar ────────────────────────────────────────────────────────────────────
+
+class NavbarAdminButtonTest(TestCase):
+    def setUp(self):
+        self.url = reverse('estoque_list')
+
+    def test_admin_ve_dropdown_admin(self):
+        make_admin(username='admin_nav')
+        self.client.login(username='admin_nav', password='senha123')
+        response = self.client.get(self.url)
+        self.assertContains(response, 'dropdown-toggle')
+        self.assertContains(response, 'Registrar Usuário')
+
+    def test_nao_admin_ve_link_desabilitado(self):
+        make_user(username='func_nav')
+        self.client.login(username='func_nav', password='senha123')
+        response = self.client.get(self.url)
+        self.assertContains(response, 'nav-link disabled')
+        self.assertNotContains(response, 'Registrar Usuário')

@@ -30,7 +30,9 @@
                 </td>
                 <td>
                     <a href="{% url 'estoque_edit' produto.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+                    {% if user.is_staff %}
                     <a href="{% url 'estoque_delete' produto.pk %}" class="btn btn-sm btn-outline-danger">Deletar</a>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
