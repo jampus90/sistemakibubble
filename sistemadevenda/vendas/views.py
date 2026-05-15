@@ -1,6 +1,8 @@
+import csv
 import urllib.parse
 
 from django.shortcuts import redirect, render, get_object_or_404
+from django.http import HttpResponse
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
@@ -297,3 +299,45 @@ def resumo(request):
         'data_inicio': data_inicio,
         'data_fim': data_fim,
     })
+
+
+@login_required(login_url='login')
+def resumo_csv(request):
+    vendas = Venda.objects.all()
+
+    data_inicio = request.GET.get('data_inicio', '')
+    data_fim = request.GET.get('data_fim', '')
+
+    if data_inicio:
+        vendas = vendas.filter(data_hora__date__gte=data_inicio)
+    if data_fim:
+        vendas = vendas.filter(data_hora__date__lte=data_fim)
+
+    total_vendido = vendas.aggregate(total=Sum('total_venda'))['total'] or 0
+    num_vendas = vendas.count()
+
+    produtos_mais_vendidos = (
+        ItemVenda.objects
+        .filter(venda__in=vendas)
+        .values('produto__nome')
+        .annotate(total_qtd=Sum('quantidade'))
+        .order_by('-total_qtd')[:10]
+    )
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="resumo_vendas.csv"'
+    response.write('﻿')  # BOM para compatibilidade com Excel
+
+    writer = csv.writer(response)
+    writer.writerow(['Resumo de Vendas'])
+    if data_inicio or data_fim:
+        writer.writerow(['Período', f'{data_inicio or "início"} até {data_fim or "hoje"}'])
+    writer.writerow([])
+    writer.writerow(['Total Vendido', f'R$ {total_vendido:.2f}'])
+    writer.writerow(['Número de Vendas', num_vendas])
+    writer.writerow([])
+    writer.writerow(['#', 'Produto', 'Qtd. Vendida'])
+    for i, item in enumerate(produtos_mais_vendidos, 1):
+        writer.writerow([i, item['produto__nome'], item['total_qtd']])
+
+    return response

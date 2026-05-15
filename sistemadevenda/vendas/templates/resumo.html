@@ -18,6 +18,12 @@
       <button type="submit" class="btn btn-primary">Filtrar</button>
       <a href="{% url 'resumo' %}" class="btn btn-outline-secondary ms-1">Limpar</a>
     </div>
+    <div class="col-auto ms-auto">
+      <a href="{% url 'resumo_csv' %}{% if data_inicio or data_fim %}?data_inicio={{ data_inicio }}&data_fim={{ data_fim }}{% endif %}"
+         class="btn btn-outline-success">
+        Exportar CSV
+      </a>
+    </div>
   </form>
 
   <!-- Cards de métricas -->

@@ -16,6 +16,7 @@ urlpatterns = [
     path('pedidos/<int:pk>/pronto/', views.pedido_pronto, name='pedido_pronto'),
     # Resumo
     path('resumo/', views.resumo, name='resumo'),
+    path('resumo/exportar/', views.resumo_csv, name='resumo_csv'),
     # Estoque
     path('estoque/', views.estoque_list, name='estoque_list'),
     path('estoque/novo/', views.estoque_create, name='estoque_create'),
