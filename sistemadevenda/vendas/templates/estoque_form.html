@@ -24,6 +24,13 @@
             <input type="number" name="quantidade_estoque" class="form-control" min="0"
                    value="{{ produto.quantidade_estoque|default:0 }}">
         </div>
+        <div class="mb-3">
+            <label class="form-label">Tipo</label>
+            <select name="tipo" class="form-select">
+                <option value="comida" {% if produto.tipo == 'comida' or not produto %}selected{% endif %}>Comida</option>
+                <option value="bebida" {% if produto.tipo == 'bebida' %}selected{% endif %}>Bebida</option>
+            </select>
+        </div>
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary">Salvar</button>
             <a href="{% url 'estoque_list' %}" class="btn btn-outline-secondary">Cancelar</a>

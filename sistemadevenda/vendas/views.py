@@ -95,7 +95,8 @@ def estoque_create(request):
         if not nome or not preco:
             return render(request, 'estoque_form.html', {'error': 'Nome e preço são obrigatórios.'})
 
-        Produto.objects.create(nome=nome, preco_unitario=preco, quantidade_estoque=quantidade)
+        tipo = request.POST.get('tipo', Produto.TIPO_COMIDA)
+        Produto.objects.create(nome=nome, preco_unitario=preco, quantidade_estoque=quantidade, tipo=tipo)
         return redirect('estoque_list')
 
     return render(request, 'estoque_form.html')
@@ -109,6 +110,7 @@ def estoque_edit(request, pk):
         produto.nome = request.POST.get('nome', '').strip()
         produto.preco_unitario = request.POST.get('preco_unitario', '')
         produto.quantidade_estoque = request.POST.get('quantidade_estoque', 0)
+        produto.tipo = request.POST.get('tipo', Produto.TIPO_COMIDA)
         produto.save()
         return redirect('estoque_list')
 
@@ -205,12 +207,16 @@ def pdv_finalizar(request):
 
         nova_senha = _gerar_senha_hoje()
         numero_wpp = request.POST.get('numero_wpp', '').strip()
+        forma_pagamento = request.POST.get('forma_pagamento', Venda.PAGAMENTO_CARTAO)
+        if forma_pagamento not in (Venda.PAGAMENTO_CARTAO, Venda.PAGAMENTO_PIX, Venda.PAGAMENTO_DINHEIRO):
+            forma_pagamento = Venda.PAGAMENTO_CARTAO
 
         venda = Venda.objects.create(
             funcionario=request.user,
             total_venda=total,
             senha=nova_senha,
             numero_wpp=numero_wpp,
+            forma_pagamento=forma_pagamento,
         )
 
         for produto_id, item in carrinho.items():
@@ -267,14 +273,52 @@ def pedido_pronto(request, pk):
     return redirect('pedidos')
 
 
+# ── Histórico de Vendas ───────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+def historico_vendas(request):
+    vendas = Venda.objects.prefetch_related('itens__produto').select_related('funcionario').order_by('-data_hora')
+
+    hoje = timezone.now().date().isoformat()
+    data_inicio = request.GET.get('data_inicio', hoje)
+    data_fim = request.GET.get('data_fim', hoje)
+
+    if data_inicio:
+        vendas = vendas.filter(data_hora__date__gte=data_inicio)
+    if data_fim:
+        vendas = vendas.filter(data_hora__date__lte=data_fim)
+
+    return render(request, 'historico_vendas.html', {
+        'vendas': vendas,
+        'data_inicio': data_inicio,
+        'data_fim': data_fim,
+    })
+
+
+@login_required(login_url='login')
+def venda_delete(request, pk):
+    venda = get_object_or_404(Venda, pk=pk)
+
+    if request.method == 'POST':
+        for item in venda.itens.all():
+            item.produto.quantidade_estoque += item.quantidade
+            item.produto.save()
+        venda.delete()
+        return redirect('historico_vendas')
+
+    return render(request, 'venda_confirm_delete.html', {'venda': venda})
+
+
 # ── Resumo ────────────────────────────────────────────────────────────────────
 
 @login_required(login_url='login')
+@user_passes_test(is_admin, login_url='login')
 def resumo(request):
     vendas = Venda.objects.all()
 
-    data_inicio = request.GET.get('data_inicio', '')
-    data_fim = request.GET.get('data_fim', '')
+    hoje = timezone.now().date().isoformat()
+    data_inicio = request.GET.get('data_inicio', hoje)
+    data_fim = request.GET.get('data_fim', hoje)
 
     if data_inicio:
         vendas = vendas.filter(data_hora__date__gte=data_inicio)
@@ -302,11 +346,13 @@ def resumo(request):
 
 
 @login_required(login_url='login')
+@user_passes_test(is_admin, login_url='login')
 def resumo_csv(request):
     vendas = Venda.objects.all()
 
-    data_inicio = request.GET.get('data_inicio', '')
-    data_fim = request.GET.get('data_fim', '')
+    hoje = timezone.now().date().isoformat()
+    data_inicio = request.GET.get('data_inicio', hoje)
+    data_fim = request.GET.get('data_fim', hoje)
 
     if data_inicio:
         vendas = vendas.filter(data_hora__date__gte=data_inicio)

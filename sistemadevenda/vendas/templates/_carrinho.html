@@ -40,8 +40,67 @@
     <input type="tel" name="numero_wpp" class="form-control form-control-sm"
            placeholder="WhatsApp do cliente (opcional, ex: 5511999998888)">
   </div>
+
+  <div class="mb-2">
+    <label class="form-label form-label-sm mb-1">Forma de pagamento</label>
+    <div class="d-flex gap-2">
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="forma_pagamento" id="pgto_cartao" value="cartao" checked onchange="toggleDinheiro(this)">
+        <label class="form-check-label" for="pgto_cartao">Cartão</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="forma_pagamento" id="pgto_pix" value="pix" onchange="toggleDinheiro(this)">
+        <label class="form-check-label" for="pgto_pix">Pix</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="forma_pagamento" id="pgto_dinheiro" value="dinheiro" onchange="toggleDinheiro(this)">
+        <label class="form-check-label" for="pgto_dinheiro">Dinheiro</label>
+      </div>
+    </div>
+  </div>
+
+  <div id="dinheiro-section" class="mb-2" style="display:none;">
+    <label class="form-label form-label-sm mb-1" for="valor_recebido">Valor recebido (R$)</label>
+    <input type="number" id="valor_recebido" name="valor_recebido" class="form-control form-control-sm"
+           min="0" step="0.01" placeholder="0,00" oninput="calcTroco()">
+    <div id="troco-info" class="mt-1" style="display:none;">
+      <span class="text-muted small">Troco: </span>
+      <strong id="troco-valor" class="text-success"></strong>
+    </div>
+  </div>
+
   <button type="submit" class="btn btn-success w-100">Finalizar Venda</button>
 </form>
+
+<script>
+(function () {
+  var total = {{ total }};
+
+  window.toggleDinheiro = function (radio) {
+    var section = document.getElementById('dinheiro-section');
+    if (radio.value === 'dinheiro') {
+      section.style.display = '';
+      calcTroco();
+    } else {
+      section.style.display = 'none';
+    }
+  };
+
+  window.calcTroco = function () {
+    var recebido = parseFloat(document.getElementById('valor_recebido').value) || 0;
+    var trocoInfo = document.getElementById('troco-info');
+    var trocoValor = document.getElementById('troco-valor');
+    if (recebido > 0) {
+      var troco = recebido - total;
+      trocoValor.textContent = 'R$ ' + troco.toFixed(2).replace('.', ',');
+      trocoValor.className = troco >= 0 ? 'text-success' : 'text-danger';
+      trocoInfo.style.display = '';
+    } else {
+      trocoInfo.style.display = 'none';
+    }
+  };
+})();
+</script>
 {% else %}
 <p class="text-muted">Carrinho vazio.</p>
 {% endif %}

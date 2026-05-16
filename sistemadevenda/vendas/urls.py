@@ -14,6 +14,9 @@ urlpatterns = [
     # Pedidos
     path('pedidos/', views.pedidos, name='pedidos'),
     path('pedidos/<int:pk>/pronto/', views.pedido_pronto, name='pedido_pronto'),
+    # Histórico de Vendas
+    path('historico/', views.historico_vendas, name='historico_vendas'),
+    path('historico/<int:pk>/deletar/', views.venda_delete, name='venda_delete'),
     # Resumo
     path('resumo/', views.resumo, name='resumo'),
     path('resumo/exportar/', views.resumo_csv, name='resumo_csv'),

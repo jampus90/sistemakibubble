@@ -9,9 +9,17 @@ class Cliente(models.Model):
         return self.nome
 
 class Produto(models.Model):
+    TIPO_COMIDA = 'comida'
+    TIPO_BEBIDA = 'bebida'
+    TIPO_CHOICES = [
+        (TIPO_COMIDA, 'Comida'),
+        (TIPO_BEBIDA, 'Bebida'),
+    ]
+
     nome = models.CharField(max_length=255)
     preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     quantidade_estoque = models.IntegerField(default=0)
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default=TIPO_COMIDA)
 
     def __str__(self):
         return self.nome
@@ -24,6 +32,15 @@ class Venda(models.Model):
         (STATUS_PRONTO, 'Pronto'),
     ]
 
+    PAGAMENTO_CARTAO = 'cartao'
+    PAGAMENTO_PIX = 'pix'
+    PAGAMENTO_DINHEIRO = 'dinheiro'
+    PAGAMENTO_CHOICES = [
+        (PAGAMENTO_CARTAO, 'Cartão'),
+        (PAGAMENTO_PIX, 'Pix'),
+        (PAGAMENTO_DINHEIRO, 'Dinheiro'),
+    ]
+
     funcionario = models.ForeignKey(User, on_delete=models.PROTECT, related_name='vendas')
     cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, blank=True, related_name='compras')
     data_hora = models.DateTimeField(auto_now_add=True)
@@ -31,6 +48,7 @@ class Venda(models.Model):
     senha = models.PositiveSmallIntegerField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDENTE)
     numero_wpp = models.CharField(max_length=20, blank=True, default='')
+    forma_pagamento = models.CharField(max_length=10, choices=PAGAMENTO_CHOICES, default=PAGAMENTO_CARTAO)
 
     def __str__(self):
         return f"Venda #{self.id} - {self.data_hora.strftime('%d/%m/%Y %H:%M')}"

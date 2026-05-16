@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Histórico de Vendas</h2>
+
+    <form method="get" class="row g-2 mb-4 align-items-end">
+        <div class="col-auto">
+            <label class="form-label mb-1">De</label>
+            <input type="date" name="data_inicio" value="{{ data_inicio }}" class="form-control">
+        </div>
+        <div class="col-auto">
+            <label class="form-label mb-1">Até</label>
+            <input type="date" name="data_fim" value="{{ data_fim }}" class="form-control">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            {% if data_inicio or data_fim %}
+            <a href="{% url 'historico_vendas' %}" class="btn btn-outline-secondary ms-1">Limpar</a>
+            {% endif %}
+        </div>
+    </form>
+
+    {% if vendas %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Senha</th>
+                    <th>Data / Hora</th>
+                    <th>Funcionário</th>
+                    <th>Itens</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for venda in vendas %}
+                <tr>
+                    <td><strong>#{{ venda.senha }}</strong></td>
+                    <td>{{ venda.data_hora|date:"d/m/Y H:i" }}</td>
+                    <td>{{ venda.funcionario.username }}</td>
+                    <td>
+                        <ul class="mb-0 ps-3">
+                            {% for item in venda.itens.all %}
+                            <li>{{ item.quantidade }}x {{ item.produto.nome }} <span class="text-muted small">(R$ {{ item.preco_na_hora }})</span></li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                    <td><strong>R$ {{ venda.total_venda }}</strong></td>
+                    <td>
+                        {% if venda.status == 'pendente' %}
+                        <span class="badge bg-warning text-dark">Pendente</span>
+                        {% else %}
+                        <span class="badge bg-success">Pronto</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'venda_delete' venda.pk %}" class="btn btn-sm btn-outline-danger">Excluir</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-muted">Nenhuma venda encontrada para o período selecionado.</p>
+    {% endif %}
+</div>
+{% endblock %}
